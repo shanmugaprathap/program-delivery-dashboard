@@ -158,33 +158,28 @@ def gantt_chart(milestones_df: pd.DataFrame, programs_df: pd.DataFrame) -> go.Fi
             )
         )
 
-    # Add today line
-    import datetime
+    # Add today line (shape + annotation to avoid categorical axis issue)
+    from datetime import date as _date
 
-    today = datetime.date.today().isoformat()
-    fig.add_vline(
-        x=today,
+    today = _date.today().isoformat()
+    fig.add_shape(
+        type="line",
+        x0=today,
+        x1=today,
+        y0=0,
+        y1=1,
+        yref="paper",
         line=dict(color="#C0392B", width=1.5, dash="dash"),
-        annotation_text="Today",
-        annotation_position="top",
-        annotation_font_color="#C0392B",
     )
-
-    # Program group dividers and labels
-    programs_in_order = list(df["name_prog"].unique())
-    for i, prog in enumerate(programs_in_order):
-        prog_rows = df[df["name_prog"] == prog]
-        first_label = prog_rows["label"].iloc[0]
-        fig.add_annotation(
-            x=0,
-            y=first_label,
-            xref="paper",
-            text=f"<b>{prog}</b>",
-            showarrow=False,
-            xanchor="right",
-            font=dict(size=11, color="#1A1A2E"),
-            xshift=-10,
-        )
+    fig.add_annotation(
+        x=today,
+        y=1,
+        yref="paper",
+        text="Today",
+        showarrow=False,
+        font=dict(size=10, color="#C0392B"),
+        yshift=10,
+    )
 
     n_rows = len(df)
     return _apply_layout(
