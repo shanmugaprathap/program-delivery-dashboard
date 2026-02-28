@@ -153,8 +153,7 @@ def gantt_chart(milestones_df: pd.DataFrame, programs_df: pd.DataFrame) -> go.Fi
                     "Program: %{customdata[0]}<br>"
                     "Due: %{x|%b %d, %Y}<br>"
                     "Quarter: %{customdata[1]}<br>"
-                    "Status: " + status_val
-                    + "<extra></extra>"
+                    "Status: " + status_val + "<extra></extra>"
                 ),
             )
         )
