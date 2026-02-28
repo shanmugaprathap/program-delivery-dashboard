@@ -81,7 +81,7 @@ def completion_bar_chart(programs_df: pd.DataFrame) -> go.Figure:
 
 
 def gantt_chart(milestones_df: pd.DataFrame, programs_df: pd.DataFrame) -> go.Figure:
-    """Gantt-style timeline of milestones grouped by program."""
+    """Scatter-based milestone timeline grouped by program."""
     df = milestones_df.merge(
         programs_df[["id", "name"]], left_on="program_id", right_on="id", suffixes=("", "_prog")
     )
@@ -89,19 +89,32 @@ def gantt_chart(milestones_df: pd.DataFrame, programs_df: pd.DataFrame) -> go.Fi
 
     color_map = {s.value: MILESTONE_COLORS[s] for s in MilestoneStatus}
 
-    fig = px.timeline(
-        df,
-        x_start="due_date",
-        x_end="due_date",
-        y="name_prog",
-        color="status",
-        hover_name="name",
-        color_discrete_map=color_map,
+    fig = go.Figure()
+    for status_val, color in color_map.items():
+        subset = df[df["status"] == status_val]
+        if subset.empty:
+            continue
+        fig.add_trace(
+            go.Scatter(
+                x=subset["due_date"],
+                y=subset["name_prog"],
+                mode="markers",
+                name=status_val,
+                marker=dict(size=12, symbol="diamond", color=color),
+                text=subset["name"],
+                hovertemplate=(
+                    "<b>%{text}</b><br>Due: %{x}<br>Status: "
+                    + status_val
+                    + "<extra></extra>"
+                ),
+            )
+        )
+    return _apply_layout(
+        fig,
+        title="Milestone Timeline",
+        yaxis_title="",
         height=max(350, len(df) * 12),
     )
-    # Convert timeline dots to scatter for milestones
-    fig.update_traces(marker=dict(size=10, symbol="diamond"))
-    return _apply_layout(fig, title="Milestone Timeline", yaxis_title="")
 
 
 def milestone_status_bar(milestones_df: pd.DataFrame) -> go.Figure:
