@@ -81,39 +81,136 @@ def completion_bar_chart(programs_df: pd.DataFrame) -> go.Figure:
 
 
 def gantt_chart(milestones_df: pd.DataFrame, programs_df: pd.DataFrame) -> go.Figure:
-    """Scatter-based milestone timeline grouped by program."""
+    """Swim-lane milestone timeline — each milestone on its own row, grouped by program."""
     df = milestones_df.merge(
         programs_df[["id", "name"]], left_on="program_id", right_on="id", suffixes=("", "_prog")
     )
-    df = df.sort_values(["name_prog", "due_date"])
+    df = df.sort_values(["name_prog", "due_date"], ascending=[True, True])
 
     color_map = {s.value: MILESTONE_COLORS[s] for s in MilestoneStatus}
+    symbol_map = {
+        MilestoneStatus.COMPLETED.value: "circle",
+        MilestoneStatus.IN_PROGRESS.value: "diamond",
+        MilestoneStatus.NOT_STARTED.value: "circle-open",
+        MilestoneStatus.DELAYED.value: "x",
+        MilestoneStatus.BLOCKED.value: "square",
+    }
+
+    # Build row labels: "  Milestone Name" indented under program headers
+    labels = []
+    seen_programs = set()
+    for _, row in df.iterrows():
+        prog = row["name_prog"]
+        if prog not in seen_programs:
+            seen_programs.add(prog)
+        labels.append(f"  {row['name']}")
+    df = df.copy()
+    df["label"] = labels
 
     fig = go.Figure()
+
+    # Horizontal connector lines per program (swim lane background)
+    for prog in df["name_prog"].unique():
+        prog_rows = df[df["name_prog"] == prog]
+        if len(prog_rows) > 1:
+            fig.add_trace(
+                go.Scatter(
+                    x=prog_rows["due_date"],
+                    y=prog_rows["label"],
+                    mode="lines",
+                    line=dict(color="#E0E0E0", width=1.5),
+                    showlegend=False,
+                    hoverinfo="skip",
+                )
+            )
+
+    # Milestone markers by status
     for status_val, color in color_map.items():
         subset = df[df["status"] == status_val]
         if subset.empty:
             continue
+        is_key = subset["is_key_milestone"]
+        sizes = [14 if k else 10 for k in is_key]
+        borders = [2.5 if k else 0 for k in is_key]
         fig.add_trace(
             go.Scatter(
                 x=subset["due_date"],
-                y=subset["name_prog"],
+                y=subset["label"],
                 mode="markers",
                 name=status_val,
-                marker=dict(size=12, symbol="diamond", color=color),
-                text=subset["name"],
+                marker=dict(
+                    size=sizes,
+                    symbol=symbol_map.get(status_val, "circle"),
+                    color=color,
+                    line=dict(
+                        width=borders,
+                        color="#1A1A2E",
+                    ),
+                ),
+                customdata=subset[["name_prog", "quarter"]].values,
                 hovertemplate=(
-                    "<b>%{text}</b><br>Due: %{x}<br>Status: "
-                    + status_val
+                    "<b>%{y}</b><br>"
+                    "Program: %{customdata[0]}<br>"
+                    "Due: %{x|%b %d, %Y}<br>"
+                    "Quarter: %{customdata[1]}<br>"
+                    "Status: " + status_val
                     + "<extra></extra>"
                 ),
             )
         )
+
+    # Add today line
+    import datetime
+
+    today = datetime.date.today().isoformat()
+    fig.add_vline(
+        x=today,
+        line=dict(color="#C0392B", width=1.5, dash="dash"),
+        annotation_text="Today",
+        annotation_position="top",
+        annotation_font_color="#C0392B",
+    )
+
+    # Program group dividers and labels
+    programs_in_order = list(df["name_prog"].unique())
+    for i, prog in enumerate(programs_in_order):
+        prog_rows = df[df["name_prog"] == prog]
+        first_label = prog_rows["label"].iloc[0]
+        fig.add_annotation(
+            x=0,
+            y=first_label,
+            xref="paper",
+            text=f"<b>{prog}</b>",
+            showarrow=False,
+            xanchor="right",
+            font=dict(size=11, color="#1A1A2E"),
+            xshift=-10,
+        )
+
+    n_rows = len(df)
     return _apply_layout(
         fig,
         title="Milestone Timeline",
-        yaxis_title="",
-        height=max(350, len(df) * 12),
+        yaxis=dict(
+            title="",
+            autorange="reversed",
+            showgrid=False,
+            tickfont=dict(size=10),
+        ),
+        xaxis=dict(
+            title="",
+            gridcolor="#F0F0F0",
+            tickformat="%b %Y",
+        ),
+        height=max(400, n_rows * 32 + 80),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="center",
+            x=0.5,
+            font=dict(size=11),
+        ),
     )
 
 
