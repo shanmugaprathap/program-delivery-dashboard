@@ -2,11 +2,7 @@
 
 import streamlit as st
 
-from src.components.charts import (
-    defect_incident_trend,
-    dora_metrics_chart,
-    velocity_trend,
-)
+from src.components.charts import defect_incident_trend, dora_metrics_chart, velocity_trend
 from src.components.filters import program_filter
 from src.components.status_cards import metric_card
 from src.data.data_loader import load_metrics, load_programs

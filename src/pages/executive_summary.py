@@ -1,7 +1,7 @@
 """Clean executive summary for leadership with export capability."""
 
-import io
 from datetime import date
+import io
 
 import streamlit as st
 

@@ -2,16 +2,11 @@
 
 from datetime import date
 
-import pytest
 from pydantic import ValidationError
+import pytest
 
 from src.data.models import DeliveryMetric, Milestone, Program, RiskItem
-from src.utils.constants import (
-    MilestoneStatus,
-    ProgramStatus,
-    RiskLikelihood,
-    RiskSeverity,
-)
+from src.utils.constants import MilestoneStatus, ProgramStatus, RiskLikelihood, RiskSeverity
 
 
 class TestProgram:

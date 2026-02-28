@@ -1,16 +1,9 @@
 """Realistic mock data generator for 6 programs with correlated milestones, risks, and metrics."""
 
-import random
 from datetime import date, timedelta
+import random
 
-from src.data.models import (
-    DeliveryMetric,
-    Escalation,
-    Milestone,
-    Program,
-    RiskItem,
-    WeeklySnapshot,
-)
+from src.data.models import DeliveryMetric, Escalation, Milestone, Program, RiskItem, WeeklySnapshot
 from src.utils.constants import (
     EscalationLevel,
     MilestoneStatus,

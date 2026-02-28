@@ -2,11 +2,7 @@
 
 import streamlit as st
 
-from src.components.charts import (
-    delivery_predictability,
-    gantt_chart,
-    milestone_status_bar,
-)
+from src.components.charts import delivery_predictability, gantt_chart, milestone_status_bar
 from src.components.filters import program_filter, quarter_filter
 from src.components.status_cards import metric_card
 from src.components.tables import styled_milestone_table
