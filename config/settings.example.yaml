@@ -1,0 +1,25 @@
+# Program Delivery Dashboard Configuration
+# Copy to settings.yaml and customize.
+
+# Data source: "mock" or "jira"
+data_source: mock
+
+# JIRA integration (only used when data_source is "jira")
+jira:
+  server: https://your-org.atlassian.net
+  email: your-email@company.com
+  api_token: YOUR_API_TOKEN
+  project_keys:
+    - CLOUD
+    - SRE
+    - SEC
+
+# Dashboard settings
+dashboard:
+  title: "Program Delivery Dashboard"
+  refresh_interval_minutes: 30
+  default_quarter: current  # "current" or e.g. "Q1 2026"
+
+# Mock data seed (for reproducible data)
+mock:
+  seed: 42
