@@ -39,7 +39,7 @@ def render():
     on_track = len(programs[programs["status"] == ProgramStatus.ON_TRACK.value])
     at_risk = len(programs[programs["status"] == ProgramStatus.AT_RISK.value])
     off_track = len(programs[programs["status"] == ProgramStatus.OFF_TRACK.value])
-    open_risks = len(risks[risks["is_open"]])
+    open_risks = len(risks[risks["is_open"] == True])
     open_esc = len(escalations[escalations["resolved_date"].isna()])
 
     with c1:
@@ -110,7 +110,7 @@ def render():
         # Critical risks
         st.markdown("**Critical & High Open Risks**")
         critical_risks = risks[
-            (risks["is_open"])
+            (risks["is_open"] == True)
             & (risks["severity"].isin([RiskSeverity.CRITICAL.value, RiskSeverity.HIGH.value]))
         ]
         for _, row in critical_risks.iterrows():
@@ -223,7 +223,7 @@ def _build_export(programs, milestones, risks, escalations) -> str:
     buf.write("=== Programs ===\n")
     programs[["name", "status", "percent_complete", "department", "owner"]].to_csv(buf, index=False)
     buf.write("\n=== Open Risks ===\n")
-    open_r = risks[risks["is_open"]][["title", "program_id", "severity", "likelihood"]]
+    open_r = risks[risks["is_open"] == True][["title", "program_id", "severity", "likelihood"]]
     open_r.to_csv(buf, index=False)
     buf.write("\n=== Open Escalations ===\n")
     open_e = escalations[escalations["resolved_date"].isna()][

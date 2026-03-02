@@ -32,7 +32,7 @@ def render():
     filtered_esc = escalations[escalations["program_id"].isin(selected_ids)]
 
     # Summary
-    open_risks = filtered_risks[filtered_risks["is_open"]]
+    open_risks = filtered_risks[filtered_risks["is_open"] == True]
     total_open = len(open_risks)
     critical = len(open_risks[open_risks["severity"] == RiskSeverity.CRITICAL.value])
     high = len(open_risks[open_risks["severity"] == RiskSeverity.HIGH.value])
@@ -60,7 +60,7 @@ def render():
     # Risk table — sorted by risk score (highest first)
     st.subheader("Risk Register")
     open_only = st.checkbox("Open risks only", value=True, key="rm_open_only")
-    display_risks = filtered_risks[filtered_risks["is_open"]] if open_only else filtered_risks
+    display_risks = filtered_risks[filtered_risks["is_open"] == True] if open_only else filtered_risks
 
     if not display_risks.empty:
         scored = display_risks.copy()

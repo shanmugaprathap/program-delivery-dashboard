@@ -201,7 +201,7 @@ def generate_decisions(
     # CRITICAL severity + HIGH likelihood open risks
     if not risks_df.empty:
         critical_risks = risks_df[
-            (risks_df["is_open"])
+            (risks_df["is_open"] == True)
             & (risks_df["severity"] == RiskSeverity.CRITICAL.value)
             & (risks_df["likelihood"] == RiskLikelihood.HIGH.value)
         ]

@@ -14,7 +14,7 @@ def styled_program_table(df: pd.DataFrame):
     display_df.columns = ["Program", "Department", "Status", "% Complete", "Owner", "Target Date"]
 
     st.dataframe(
-        display_df.style.applymap(
+        display_df.style.map(
             lambda v: (
                 f"color: {STATUS_COLORS.get(ProgramStatus(v), '#1A1A2E')}; font-weight: 600"
                 if v in [s.value for s in ProgramStatus]
@@ -63,7 +63,7 @@ def styled_risk_table(df: pd.DataFrame):
     )
     display_df["Open"] = display_df["Open"].map({True: "Yes", False: "No"})
 
-    styler = display_df.style.applymap(
+    styler = display_df.style.map(
         lambda v: (
             f"color: {SEVERITY_COLORS.get(RiskSeverity(v), '#1A1A2E')}; font-weight: 600"
             if v in [s.value for s in RiskSeverity]
@@ -73,7 +73,7 @@ def styled_risk_table(df: pd.DataFrame):
     )
 
     if has_age:
-        styler = styler.applymap(_age_color, subset=["Age (days)"])
+        styler = styler.map(_age_color, subset=["Age (days)"])
 
     st.dataframe(styler, use_container_width=True, hide_index=True)
 

@@ -406,7 +406,7 @@ def risk_heatmap(risks_df: pd.DataFrame) -> go.Figure:
                 risks_df[
                     (risks_df["severity"] == sev)
                     & (risks_df["likelihood"] == lik)
-                    & (risks_df["is_open"])
+                    & (risks_df["is_open"] == True)
                 ]
             )
             row.append(count)
@@ -434,7 +434,7 @@ def risk_heatmap(risks_df: pd.DataFrame) -> go.Figure:
 
 def risk_trend(risks_df: pd.DataFrame) -> go.Figure:
     """Cumulative stacked area chart of open risks over time by severity."""
-    open_risks = risks_df[risks_df["is_open"]].copy()
+    open_risks = risks_df[risks_df["is_open"] == True].copy()
     if open_risks.empty:
         fig = go.Figure()
         fig.add_annotation(
