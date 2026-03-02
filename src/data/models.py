@@ -24,6 +24,7 @@ class Program(BaseModel):
     owner: str
     description: str = ""
     budget_millions: float = 0.0
+    budget_spent_millions: float = 0.0
 
 
 class Milestone(BaseModel):

@@ -1,7 +1,7 @@
 # Program Delivery Dashboard Configuration
 # Copy to settings.yaml and customize.
 
-# Data source: "mock" or "jira"
+# Data source: "mock", "jira", or "asana"
 data_source: mock
 
 # JIRA integration (only used when data_source is "jira")
@@ -13,6 +13,23 @@ jira:
     - CLOUD
     - SRE
     - SEC
+
+# Asana integration (only used when data_source is "asana")
+# Portfolio URL format: https://app.asana.com/0/portfolio/{portfolio_gid}/{project_gid}
+asana:
+  personal_access_token: YOUR_ASANA_PAT
+  portfolio_gid: "YOUR_PORTFOLIO_GID"
+  # Optional: custom field names for mapping Asana fields to dashboard models
+  department_field: Department          # Custom field for program department
+  budget_field: Budget                  # Custom field for budget (in millions)
+  budget_spent_field: Budget Spent      # Custom field for budget spent (in millions)
+  # Optional: tag names to identify special task types
+  risk_tag: risk                        # Tag to identify risk tasks
+  escalation_tag: escalation            # Tag to identify escalation tasks
+  milestone_tag: null                   # Tag for milestones (null = all tasks)
+  severity_field: Severity              # Custom field for risk severity
+  likelihood_field: Likelihood          # Custom field for risk likelihood
+  escalation_level_field: Escalation Level  # Custom field for escalation level
 
 # Dashboard settings
 dashboard:

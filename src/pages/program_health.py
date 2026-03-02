@@ -2,7 +2,11 @@
 
 import streamlit as st
 
-from src.components.charts import completion_bar_chart, program_status_donut
+from src.components.charts import (
+    budget_utilization_bar,
+    completion_bar_chart,
+    program_status_donut,
+)
 from src.components.filters import program_filter, status_filter
 from src.components.status_cards import metric_card, program_card
 from src.components.tables import styled_program_table
@@ -58,6 +62,10 @@ def render():
     with col_right:
         st.plotly_chart(completion_bar_chart(filtered), use_container_width=True)
 
+    # Budget utilization chart
+    st.subheader("Budget")
+    st.plotly_chart(budget_utilization_bar(filtered), use_container_width=True)
+
     # Program cards
     st.subheader("Program Details")
     cols = st.columns(2)
@@ -69,6 +77,8 @@ def render():
                 row["percent_complete"],
                 row["department"],
                 row["owner"],
+                budget=row.get("budget_millions"),
+                spent=row.get("budget_spent_millions"),
             )
 
     # Table view

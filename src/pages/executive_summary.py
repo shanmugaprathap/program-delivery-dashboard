@@ -5,7 +5,12 @@ import io
 
 import streamlit as st
 
-from src.components.charts import completion_bar_chart, program_status_donut
+from src.components.charts import (
+    budget_by_program_bar,
+    budget_by_status_pie,
+    completion_bar_chart,
+    program_status_donut,
+)
 from src.components.status_cards import metric_card, status_badge
 from src.data.data_loader import (
     load_escalations,
@@ -15,6 +20,7 @@ from src.data.data_loader import (
     load_risks,
 )
 from src.utils.constants import MilestoneStatus, ProgramStatus, RiskSeverity
+from src.utils.helpers import format_percent_delta, generate_decisions
 
 
 def render():
@@ -57,6 +63,29 @@ def render():
         st.plotly_chart(program_status_donut(programs), use_container_width=True)
     with col2:
         st.plotly_chart(completion_bar_chart(programs), use_container_width=True)
+
+    st.markdown("---")
+
+    # Budget Overview
+    st.subheader("Budget Overview")
+    total_budget = programs["budget_millions"].sum()
+    total_spent = programs["budget_spent_millions"].sum()
+    utilization = (total_spent / total_budget * 100) if total_budget > 0 else 0
+
+    bc1, bc2, bc3 = st.columns(3)
+    with bc1:
+        metric_card("Total Budget", f"${total_budget:.1f}M", color="#1B6AC9")
+    with bc2:
+        metric_card("Total Spent", f"${total_spent:.1f}M", color="#8E44AD")
+    with bc3:
+        util_color = "#C0392B" if utilization > 100 else ("#D4A017" if utilization > 85 else "#2E8B57")
+        metric_card("Utilization", f"{utilization:.0f}%", color=util_color)
+
+    col_b1, col_b2 = st.columns(2)
+    with col_b1:
+        st.plotly_chart(budget_by_program_bar(programs), use_container_width=True)
+    with col_b2:
+        st.plotly_chart(budget_by_status_pie(programs), use_container_width=True)
 
     st.markdown("---")
 
@@ -112,23 +141,66 @@ def render():
 
     st.markdown("---")
 
-    # DORA highlights
+    # DORA highlights with WoW deltas
     st.subheader("Delivery Health (Latest Week)")
-    latest_week = metrics["week_start"].max()
-    latest = metrics[metrics["week_start"] == latest_week]
-    dc1, dc2, dc3, dc4 = st.columns(4)
-    with dc1:
-        metric_card(
-            "Avg Deploy Freq", f"{latest['deployment_frequency'].mean():.1f}/wk", color="#1B6AC9"
-        )
-    with dc2:
-        metric_card("Avg Lead Time", f"{latest['lead_time_days'].mean():.1f} days", color="#2E8B57")
-    with dc3:
-        metric_card("Total Velocity", f"{latest['velocity'].sum():.0f} pts", color="#8E44AD")
-    with dc4:
-        metric_card("Incidents", str(latest["incident_count"].sum()), color="#C0392B")
+    sorted_weeks = sorted(metrics["week_start"].unique())
+    latest_week = sorted_weeks[-1] if sorted_weeks else None
+    prev_week = sorted_weeks[-2] if len(sorted_weeks) >= 2 else None
+
+    if latest_week is not None:
+        latest = metrics[metrics["week_start"] == latest_week]
+        prev = metrics[metrics["week_start"] == prev_week] if prev_week is not None else None
+
+        deploy_cur = latest["deployment_frequency"].mean()
+        lead_cur = latest["lead_time_days"].mean()
+        vel_cur = latest["velocity"].sum()
+        inc_cur = latest["incident_count"].sum()
+
+        deploy_delta = None
+        lead_delta = None
+        vel_delta = None
+        inc_delta = None
+
+        if prev is not None:
+            deploy_delta = format_percent_delta(deploy_cur, prev["deployment_frequency"].mean())
+            lead_delta = format_percent_delta(lead_cur, prev["lead_time_days"].mean())
+            vel_delta = format_percent_delta(vel_cur, prev["velocity"].sum())
+            inc_delta = format_percent_delta(float(inc_cur), float(prev["incident_count"].sum()))
+
+        dc1, dc2, dc3, dc4 = st.columns(4)
+        with dc1:
+            metric_card("Avg Deploy Freq", f"{deploy_cur:.1f}/wk", delta=deploy_delta, color="#1B6AC9")
+        with dc2:
+            metric_card(
+                "Avg Lead Time", f"{lead_cur:.1f} days",
+                delta=lead_delta, color="#2E8B57", inverse_delta=True,
+            )
+        with dc3:
+            metric_card("Total Velocity", f"{vel_cur:.0f} pts", delta=vel_delta, color="#8E44AD")
+        with dc4:
+            metric_card(
+                "Incidents", str(int(inc_cur)),
+                delta=inc_delta, color="#C0392B", inverse_delta=True,
+            )
 
     st.markdown("---")
+
+    # Decisions Needed
+    decisions = generate_decisions(programs, risks, milestones, escalations)
+    if decisions:
+        st.subheader("Decisions Needed")
+        severity_icons = {
+            "critical": ":red_circle:",
+            "high": ":orange_circle:",
+            "medium": ":large_yellow_circle:",
+        }
+        for d in decisions:
+            icon = severity_icons.get(d.severity, ":white_circle:")
+            st.markdown(
+                f"{icon} **{d.title}**  \n"
+                f"&nbsp;&nbsp;&nbsp;&nbsp;Recommendation: {d.recommendation}"
+            )
+        st.markdown("---")
 
     # Export
     st.subheader("Export")

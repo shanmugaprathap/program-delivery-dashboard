@@ -5,11 +5,29 @@ import streamlit as st
 from src.utils.constants import STATUS_COLORS, ProgramStatus
 
 
-def metric_card(label: str, value: str, delta: str | None = None, color: str = "#1B6AC9"):
-    """Render a single metric card with optional delta."""
+def metric_card(
+    label: str,
+    value: str,
+    delta: str | None = None,
+    color: str = "#1B6AC9",
+    inverse_delta: bool = False,
+):
+    """Render a single metric card with optional delta.
+
+    Args:
+        inverse_delta: If True, negative deltas show green (for metrics where
+                       lower is better, like lead time, CFR, MTTR).
+    """
     delta_html = ""
     if delta:
-        delta_color = "#2E8B57" if not delta.startswith("-") else "#C0392B"
+        is_negative = delta.startswith("-")
+        if inverse_delta:
+            delta_color = "#2E8B57" if is_negative else "#C0392B"
+        else:
+            delta_color = "#2E8B57" if not is_negative else "#C0392B"
+        # Neutral for zero
+        if delta in ("0.0%", "+0.0%", "0%"):
+            delta_color = "#6B7280"
         delta_html = f'<div style="font-size:0.85rem;color:{delta_color};">{delta}</div>'
 
     st.markdown(
@@ -43,10 +61,33 @@ def status_badge(status: ProgramStatus) -> str:
     )
 
 
-def program_card(name: str, status: ProgramStatus, pct: float, department: str, owner: str):
-    """Render a program summary card."""
+def program_card(
+    name: str,
+    status: ProgramStatus,
+    pct: float,
+    department: str,
+    owner: str,
+    budget: float | None = None,
+    spent: float | None = None,
+):
+    """Render a program summary card with optional budget line."""
     color = STATUS_COLORS.get(status, "#95A5A6")
     bar_color = color
+
+    budget_html = ""
+    if budget is not None and spent is not None:
+        utilization = (spent / budget * 100) if budget > 0 else 0
+        over = utilization > 100
+        budget_color = "#C0392B" if over else "#2E8B57"
+        budget_html = f"""
+            <div style="font-size:0.78rem;color:#6B7280;margin-top:0.5rem;">
+                Budget: ${spent:.1f}M / ${budget:.1f}M
+                <span style="color:{budget_color};font-weight:600;">
+                    ({utilization:.0f}%)
+                </span>
+            </div>
+        """
+
     st.markdown(
         f"""
         <div style="
@@ -71,6 +112,7 @@ def program_card(name: str, status: ProgramStatus, pct: float, department: str, 
             <div style="font-size:0.75rem;color:#6B7280;margin-top:0.3rem;text-align:right;">
                 {pct:.0f}% complete
             </div>
+            {budget_html}
         </div>
         """,
         unsafe_allow_html=True,

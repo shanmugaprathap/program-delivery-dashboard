@@ -41,7 +41,15 @@ with st.sidebar:
     st.divider()
     page = st.radio("Navigation", list(PAGES.keys()), label_visibility="collapsed")
     st.divider()
-    st.caption("Data source: Mock (seed=42)")
+    from src.utils.config import get as cfg_get
+
+    _source = cfg_get("data_source", "mock")
+    if _source == "asana":
+        st.caption("Data source: Asana Portfolio")
+    elif _source == "jira":
+        st.caption("Data source: JIRA")
+    else:
+        st.caption("Data source: Mock (seed=42)")
     st.caption("Last refresh: Live")
 
 # Render selected page

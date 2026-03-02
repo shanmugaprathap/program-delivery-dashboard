@@ -2,11 +2,21 @@
 
 from datetime import date
 
-from src.utils.constants import ProgramStatus, RiskLikelihood, RiskSeverity
+import pandas as pd
+
+from src.utils.constants import (
+    MilestoneStatus,
+    ProgramStatus,
+    RiskLikelihood,
+    RiskSeverity,
+)
 from src.utils.helpers import (
+    classify_dora_maturity,
     current_quarter,
     days_until,
     format_delta,
+    format_percent_delta,
+    generate_decisions,
     percent_change,
     quarter_date_range,
     rag_status,
@@ -91,3 +101,107 @@ class TestPercentChange:
 
     def test_zero_previous(self):
         assert percent_change(100, 0) is None
+
+
+class TestFormatPercentDelta:
+    def test_increase(self):
+        result = format_percent_delta(110, 100)
+        assert result == "+10.0%"
+
+    def test_decrease(self):
+        result = format_percent_delta(90, 100)
+        assert result == "-10.0%"
+
+    def test_zero_change(self):
+        result = format_percent_delta(100, 100)
+        assert result == "0.0%"
+
+    def test_zero_previous(self):
+        result = format_percent_delta(100, 0)
+        assert result is None
+
+
+class TestClassifyDoraMaturity:
+    def test_elite(self):
+        level = classify_dora_maturity(
+            deploy_freq=10.0, lead_time=0.5, cfr=3.0, mttr=0.5
+        )
+        assert level == "Elite"
+
+    def test_low(self):
+        level = classify_dora_maturity(
+            deploy_freq=0.1, lead_time=60.0, cfr=30.0, mttr=500.0
+        )
+        assert level == "Low"
+
+    def test_weakest_link(self):
+        # Elite on 3 metrics, Low on mttr -> Low overall
+        level = classify_dora_maturity(
+            deploy_freq=10.0, lead_time=0.5, cfr=3.0, mttr=500.0
+        )
+        assert level == "Low"
+
+    def test_medium(self):
+        level = classify_dora_maturity(
+            deploy_freq=0.5, lead_time=15.0, cfr=12.0, mttr=100.0
+        )
+        assert level == "Medium"
+
+
+class TestGenerateDecisions:
+    def _make_programs_df(self, statuses):
+        rows = []
+        for i, status in enumerate(statuses):
+            rows.append({
+                "id": f"PRG-{i:03d}",
+                "name": f"Program {i}",
+                "status": status.value,
+                "percent_complete": 30.0 if status == ProgramStatus.OFF_TRACK else 80.0,
+                "department": "Eng",
+                "owner": "Owner",
+                "start_date": date(2025, 1, 1),
+                "target_end_date": date(2026, 1, 1),
+                "budget_millions": 1.0,
+                "budget_spent_millions": 0.5,
+            })
+        return pd.DataFrame(rows)
+
+    def _empty_df(self, columns):
+        return pd.DataFrame(columns=columns)
+
+    def test_off_track_generates_decision(self):
+        programs = self._make_programs_df([ProgramStatus.OFF_TRACK])
+        decisions = generate_decisions(
+            programs,
+            self._empty_df(["severity", "likelihood", "is_open", "title", "program_id"]),
+            self._empty_df(["status", "name", "program_id"]),
+            self._empty_df(["resolved_date", "raised_date", "title", "program_id"]),
+        )
+        assert len(decisions) >= 1
+        assert decisions[0].severity == "critical"
+        assert "off track" in decisions[0].title.lower()
+
+    def test_blocked_milestone_generates_decision(self):
+        programs = self._make_programs_df([ProgramStatus.ON_TRACK])
+        milestones = pd.DataFrame([{
+            "status": MilestoneStatus.BLOCKED.value,
+            "name": "Blocked Task",
+            "program_id": "PRG-000",
+        }])
+        decisions = generate_decisions(
+            programs,
+            self._empty_df(["severity", "likelihood", "is_open", "title", "program_id"]),
+            milestones,
+            self._empty_df(["resolved_date", "raised_date", "title", "program_id"]),
+        )
+        assert any("Blocked" in d.title for d in decisions)
+
+    def test_clean_state_empty(self):
+        programs = self._make_programs_df([ProgramStatus.ON_TRACK])
+        decisions = generate_decisions(
+            programs,
+            self._empty_df(["severity", "likelihood", "is_open", "title", "program_id"]),
+            self._empty_df(["status", "name", "program_id"]),
+            self._empty_df(["resolved_date", "raised_date", "title", "program_id"]),
+        )
+        assert len(decisions) == 0

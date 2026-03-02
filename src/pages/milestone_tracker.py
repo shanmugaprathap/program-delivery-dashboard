@@ -8,6 +8,7 @@ from src.components.status_cards import metric_card
 from src.components.tables import styled_milestone_table
 from src.data.data_loader import load_milestones, load_programs
 from src.utils.constants import MilestoneStatus
+from src.utils.helpers import current_quarter, days_until, format_delta
 
 
 def render():
@@ -22,7 +23,7 @@ def render():
         with col1:
             selected_ids = program_filter(programs, key="mt_prog")
         with col2:
-            selected_quarters = quarter_filter(key="mt_qtr")
+            selected_quarters = quarter_filter(key="mt_qtr", milestones_df=milestones)
 
     filtered = milestones[
         (milestones["program_id"].isin(selected_ids))
@@ -52,6 +53,27 @@ def render():
         metric_card("Key Milestones", str(key_milestones), color="#8E44AD")
 
     st.markdown("---")
+
+    # Upcoming milestones with time-to-due
+    cur_q = current_quarter()
+    upcoming = filtered[
+        filtered["status"].isin(
+            [MilestoneStatus.IN_PROGRESS.value, MilestoneStatus.NOT_STARTED.value]
+        )
+    ].sort_values("due_date").head(5)
+
+    if not upcoming.empty:
+        st.subheader("Upcoming Milestones")
+        for _, row in upcoming.iterrows():
+            days = days_until(row["due_date"])
+            delta_str = format_delta(days)
+            q_label = " **(current)**" if row["quarter"] == cur_q else ""
+            key_label = " :star:" if row["is_key_milestone"] else ""
+            st.markdown(
+                f"- **{row['name']}**{key_label} — {delta_str} "
+                f"(due {row['due_date']}, {row['quarter']}{q_label})"
+            )
+        st.markdown("---")
 
     # Gantt chart
     st.plotly_chart(gantt_chart(filtered, programs), use_container_width=True)

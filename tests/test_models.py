@@ -50,6 +50,22 @@ class TestProgram:
                 owner="Test",
             )
 
+    def test_budget_spent_field(self):
+        p = Program(
+            id="PRG-999",
+            name="Test Program",
+            department="Engineering",
+            status=ProgramStatus.ON_TRACK,
+            percent_complete=50.0,
+            start_date=date(2025, 1, 1),
+            target_end_date=date(2025, 12, 31),
+            owner="Test Owner",
+            budget_millions=5.0,
+            budget_spent_millions=3.2,
+        )
+        assert p.budget_spent_millions == 3.2
+        assert p.budget_millions == 5.0
+
 
 class TestMilestone:
     def test_valid_milestone(self):

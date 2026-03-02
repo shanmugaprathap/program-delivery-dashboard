@@ -35,6 +35,7 @@ PROGRAMS = [
         owner="Priya Sharma",
         description="Migrate legacy on-prem services to AWS/GCP hybrid cloud.",
         budget_millions=4.2,
+        budget_spent_millions=3.0,  # ~71% spent at 72% complete — on track
     ),
     Program(
         id="PRG-002",
@@ -49,6 +50,7 @@ PROGRAMS = [
             "Deploy unified observability stack (metrics, logs, traces) across all services."
         ),
         budget_millions=2.1,
+        budget_spent_millions=1.8,  # ~86% spent at 85% complete — on track
     ),
     Program(
         id="PRG-003",
@@ -63,6 +65,7 @@ PROGRAMS = [
             "Implement zero-trust architecture with mTLS, IAM overhaul, and microsegmentation."
         ),
         budget_millions=3.5,
+        budget_spent_millions=2.3,  # ~66% spent at 45% complete — over-spending (at risk)
     ),
     Program(
         id="PRG-004",
@@ -75,6 +78,7 @@ PROGRAMS = [
         owner="Alex Kim",
         description="Replace legacy API gateway with Kong/Envoy-based solution.",
         budget_millions=1.8,
+        budget_spent_millions=1.1,  # ~61% spent at 60% complete — on track
     ),
     Program(
         id="PRG-005",
@@ -87,6 +91,7 @@ PROGRAMS = [
         owner="David Okonkwo",
         description="Automate DR runbooks and achieve <4hr RTO for Tier-1 services.",
         budget_millions=2.8,
+        budget_spent_millions=2.1,  # ~75% spent at 30% complete — massively over (off track)
     ),
     Program(
         id="PRG-006",
@@ -99,6 +104,7 @@ PROGRAMS = [
         owner="Sarah Tanaka",
         description="Consolidate Redshift, BigQuery, and Snowflake into unified lakehouse.",
         budget_millions=3.0,
+        budget_spent_millions=2.8,  # ~93% spent at 100% complete — under budget (completed)
     ),
 ]
 
@@ -372,8 +378,72 @@ def _generate_escalations() -> list[Escalation]:
 
 
 # ---------------------------------------------------------------------------
-# Delivery Metrics (weekly, per program)
+# Delivery Metrics (weekly, per program) — status-correlated
 # ---------------------------------------------------------------------------
+
+# Base profiles correlated with program status
+_METRIC_PROFILES = {
+    "PRG-001": {  # ON_TRACK
+        "velocity_base": 45, "defect_base": 3, "deploy_freq": 4.0,
+        "lead_time": 2.5, "cfr_base": 8.0, "trend_slope": 0.008,
+        "noise_range": (0.85, 1.15),
+    },
+    "PRG-002": {  # ON_TRACK
+        "velocity_base": 38, "defect_base": 2, "deploy_freq": 8.0,
+        "lead_time": 1.0, "cfr_base": 5.0, "trend_slope": 0.008,
+        "noise_range": (0.85, 1.15),
+    },
+    "PRG-003": {  # AT_RISK — flat/declining, moderate noise
+        "velocity_base": 25, "defect_base": 5, "deploy_freq": 2.0,
+        "lead_time": 5.0, "cfr_base": 14.0, "trend_slope": -0.002,
+        "noise_range": (0.75, 1.25),
+    },
+    "PRG-004": {  # ON_TRACK
+        "velocity_base": 32, "defect_base": 3, "deploy_freq": 5.0,
+        "lead_time": 2.0, "cfr_base": 7.0, "trend_slope": 0.008,
+        "noise_range": (0.85, 1.15),
+    },
+    "PRG-005": {  # OFF_TRACK — degrading, high volatility
+        "velocity_base": 18, "defect_base": 4, "deploy_freq": 1.5,
+        "lead_time": 7.0, "cfr_base": 18.0, "trend_slope": -0.008,
+        "noise_range": (0.70, 1.30),
+    },
+    "PRG-006": {  # COMPLETED — stable
+        "velocity_base": 40, "defect_base": 1, "deploy_freq": 6.0,
+        "lead_time": 1.5, "cfr_base": 4.0, "trend_slope": 0.0,
+        "noise_range": (0.90, 1.10),
+    },
+}
+
+# Approximate status transition dates for dynamic weekly status counts
+_STATUS_HISTORY = {
+    "PRG-001": [(date(2025, 1, 1), ProgramStatus.ON_TRACK)],
+    "PRG-002": [(date(2025, 1, 1), ProgramStatus.ON_TRACK)],
+    "PRG-003": [
+        (date(2025, 1, 1), ProgramStatus.ON_TRACK),
+        (date(2025, 8, 1), ProgramStatus.AT_RISK),
+    ],
+    "PRG-004": [(date(2025, 1, 1), ProgramStatus.ON_TRACK)],
+    "PRG-005": [
+        (date(2025, 1, 1), ProgramStatus.ON_TRACK),
+        (date(2025, 7, 1), ProgramStatus.AT_RISK),
+        (date(2025, 10, 1), ProgramStatus.OFF_TRACK),
+    ],
+    "PRG-006": [
+        (date(2025, 1, 1), ProgramStatus.ON_TRACK),
+        (date(2025, 12, 15), ProgramStatus.COMPLETED),
+    ],
+}
+
+
+def _get_status_at_date(program_id: str, as_of: date) -> ProgramStatus:
+    """Return the status of a program at a given date."""
+    transitions = _STATUS_HISTORY.get(program_id, [])
+    status = ProgramStatus.ON_TRACK
+    for transition_date, transition_status in transitions:
+        if as_of >= transition_date:
+            status = transition_status
+    return status
 
 
 def _generate_metrics() -> list[DeliveryMetric]:
@@ -382,20 +452,15 @@ def _generate_metrics() -> list[DeliveryMetric]:
     start = date(2025, 7, 7)  # Start tracking from Q3 2025
     num_weeks = 34  # ~8 months of data
 
-    program_profiles = {
-        "PRG-001": {"velocity_base": 45, "defect_base": 3, "deploy_freq": 4.0, "lead_time": 2.5},
-        "PRG-002": {"velocity_base": 38, "defect_base": 2, "deploy_freq": 8.0, "lead_time": 1.0},
-        "PRG-003": {"velocity_base": 25, "defect_base": 5, "deploy_freq": 2.0, "lead_time": 5.0},
-        "PRG-004": {"velocity_base": 32, "defect_base": 3, "deploy_freq": 5.0, "lead_time": 2.0},
-        "PRG-005": {"velocity_base": 18, "defect_base": 4, "deploy_freq": 1.5, "lead_time": 7.0},
-        "PRG-006": {"velocity_base": 40, "defect_base": 1, "deploy_freq": 6.0, "lead_time": 1.5},
-    }
+    for pid, prof in _METRIC_PROFILES.items():
+        noise_lo, noise_hi = prof["noise_range"]
+        slope = prof["trend_slope"]
+        cfr_base = prof["cfr_base"]
 
-    for pid, prof in program_profiles.items():
         for w in range(num_weeks):
             week = start + timedelta(weeks=w)
-            noise = random.uniform(0.8, 1.2)
-            trend = 1 + (w * 0.005)  # Slight upward trend
+            noise = random.uniform(noise_lo, noise_hi)
+            trend = 1 + (w * slope)
 
             velocity = round(prof["velocity_base"] * noise * trend, 1)
             planned = round(velocity * random.uniform(0.9, 1.15), 1)
@@ -403,22 +468,23 @@ def _generate_metrics() -> list[DeliveryMetric]:
             defects = max(0, int(prof["defect_base"] * noise + random.randint(-2, 2)))
             incidents = max(0, random.randint(0, max(1, defects // 2)))
             mttr = round(random.uniform(0.5, 4.0), 1)
-            deploy_freq = round(prof["deploy_freq"] * noise, 1)
-            lead_time = round(prof["lead_time"] * random.uniform(0.7, 1.3), 1)
-            cfr = round(random.uniform(2, 18), 1)
+            deploy_freq = round(prof["deploy_freq"] * noise * trend, 1)
+            lead_time = round(prof["lead_time"] * random.uniform(0.7, 1.3) * (2 - trend), 1)
+            # CFR correlated with trend: worse programs have higher CFR
+            cfr = round(max(1, min(50, cfr_base * noise * (2 - trend))), 1)
 
             metrics.append(
                 DeliveryMetric(
                     program_id=pid,
                     week_start=week,
-                    velocity=velocity,
-                    planned_points=planned,
-                    delivered_points=delivered,
+                    velocity=max(0, velocity),
+                    planned_points=max(0, planned),
+                    delivered_points=max(0, delivered),
                     defect_count=defects,
                     incident_count=incidents,
                     mttr_hours=mttr,
-                    deployment_frequency=deploy_freq,
-                    lead_time_days=lead_time,
+                    deployment_frequency=max(0, deploy_freq),
+                    lead_time_days=max(0.1, lead_time),
                     change_failure_rate=cfr,
                 )
             )
@@ -451,20 +517,24 @@ def get_metrics() -> list[DeliveryMetric]:
 
 
 def get_weekly_snapshots() -> list[WeeklySnapshot]:
-    """Aggregate per-program metrics into weekly snapshots."""
+    """Aggregate per-program metrics into weekly snapshots with dynamic status counts."""
     metrics = get_metrics()
-    programs = get_programs()
     weeks: dict[date, list[DeliveryMetric]] = {}
     for m in metrics:
         weeks.setdefault(m.week_start, []).append(m)
 
-    status_counts = {}
-    for p in programs:
-        status_counts[p.status] = status_counts.get(p.status, 0) + 1
+    program_ids = [p.id for p in PROGRAMS]
 
     snapshots = []
     for week, week_metrics in sorted(weeks.items()):
         n = len(week_metrics)
+
+        # Compute status counts dynamically based on the week
+        status_counts: dict[ProgramStatus, int] = {}
+        for pid in program_ids:
+            status = _get_status_at_date(pid, week)
+            status_counts[status] = status_counts.get(status, 0) + 1
+
         snapshots.append(
             WeeklySnapshot(
                 week_start=week,

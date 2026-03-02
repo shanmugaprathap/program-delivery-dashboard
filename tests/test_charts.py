@@ -3,6 +3,9 @@
 import pandas as pd
 
 from src.components.charts import (
+    budget_by_program_bar,
+    budget_by_status_pie,
+    budget_utilization_bar,
     completion_bar_chart,
     defect_incident_trend,
     delivery_predictability,
@@ -61,6 +64,8 @@ class TestChartRendering:
     def test_risk_trend(self):
         fig = risk_trend(_risks_df())
         assert fig is not None
+        # Should have traces for the stacked area chart
+        assert len(fig.data) > 0
 
     def test_velocity_trend(self):
         fig = velocity_trend(_metrics_df())
@@ -76,4 +81,17 @@ class TestChartRendering:
 
     def test_defect_incident_trend(self):
         fig = defect_incident_trend(_metrics_df())
+        assert fig is not None
+
+    def test_budget_by_program_bar(self):
+        fig = budget_by_program_bar(_programs_df())
+        assert fig is not None
+        assert len(fig.data) == 2  # Budgeted + Spent traces
+
+    def test_budget_by_status_pie(self):
+        fig = budget_by_status_pie(_programs_df())
+        assert fig is not None
+
+    def test_budget_utilization_bar(self):
+        fig = budget_utilization_bar(_programs_df())
         assert fig is not None

@@ -7,7 +7,8 @@ from src.components.filters import program_filter, severity_filter
 from src.components.status_cards import metric_card
 from src.components.tables import styled_escalation_table, styled_risk_table
 from src.data.data_loader import load_escalations, load_programs, load_risks
-from src.utils.constants import RiskSeverity
+from src.utils.constants import RiskLikelihood, RiskSeverity
+from src.utils.helpers import risk_score
 
 
 def render():
@@ -56,11 +57,24 @@ def render():
     with col2:
         st.plotly_chart(risk_trend(filtered_risks), use_container_width=True)
 
-    # Risk table
+    # Risk table — sorted by risk score (highest first)
     st.subheader("Risk Register")
     open_only = st.checkbox("Open risks only", value=True, key="rm_open_only")
     display_risks = filtered_risks[filtered_risks["is_open"]] if open_only else filtered_risks
-    styled_risk_table(display_risks)
+
+    if not display_risks.empty:
+        scored = display_risks.copy()
+        scored["_risk_score"] = scored.apply(
+            lambda r: risk_score(
+                RiskSeverity(r["severity"]),
+                RiskLikelihood(r["likelihood"]),
+            ),
+            axis=1,
+        )
+        scored = scored.sort_values("_risk_score", ascending=False).drop(columns=["_risk_score"])
+        styled_risk_table(scored)
+    else:
+        st.info("No risks match the selected filters.")
 
     # Escalations
     st.subheader("Escalations")
