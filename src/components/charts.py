@@ -203,7 +203,10 @@ def budget_utilization_bar(programs_df: pd.DataFrame) -> go.Figure:
     return _apply_layout(
         fig,
         title="Budget Utilization",
-        xaxis=dict(title="% Utilized", range=[0, max(df["utilization"].max() * 1.1, 110)]),
+        xaxis=dict(
+            title="% Utilized",
+            range=[0, max(df["utilization"].max() * 1.1, 110) if not df.empty else 110],
+        ),
         yaxis=dict(title=""),
         height=350,
     )

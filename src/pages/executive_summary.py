@@ -143,7 +143,11 @@ def render():
 
     # DORA highlights with WoW deltas
     st.subheader("Delivery Health (Latest Week)")
-    sorted_weeks = sorted(metrics["week_start"].unique())
+    if metrics.empty:
+        st.info("No delivery metrics available for the current data source.")
+        sorted_weeks = []
+    else:
+        sorted_weeks = sorted(metrics["week_start"].unique())
     latest_week = sorted_weeks[-1] if sorted_weeks else None
     prev_week = sorted_weeks[-2] if len(sorted_weeks) >= 2 else None
 

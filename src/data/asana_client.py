@@ -214,6 +214,14 @@ def fetch_programs() -> pd.DataFrame:
             }
         )
 
+    if not programs:
+        return pd.DataFrame(
+            columns=[
+                "id", "name", "department", "status", "percent_complete",
+                "start_date", "target_end_date", "owner", "description",
+                "budget_millions", "budget_spent_millions",
+            ]
+        )
     return pd.DataFrame(programs)
 
 
@@ -301,6 +309,13 @@ def fetch_milestones() -> pd.DataFrame:
                 }
             )
 
+    if not milestones:
+        return pd.DataFrame(
+            columns=[
+                "id", "program_id", "name", "status", "due_date",
+                "completed_date", "quarter", "owner", "is_key_milestone",
+            ]
+        )
     return pd.DataFrame(milestones)
 
 
@@ -370,6 +385,14 @@ def fetch_risks() -> pd.DataFrame:
                 }
             )
 
+    if not risks:
+        return pd.DataFrame(
+            columns=[
+                "id", "program_id", "title", "description", "severity",
+                "likelihood", "mitigation", "owner", "raised_date",
+                "is_open", "risk_age_days",
+            ]
+        )
     return pd.DataFrame(risks)
 
 
@@ -430,6 +453,13 @@ def fetch_escalations() -> pd.DataFrame:
                 }
             )
 
+    if not escalations:
+        return pd.DataFrame(
+            columns=[
+                "id", "program_id", "risk_id", "title", "level",
+                "raised_date", "resolved_date", "resolution",
+            ]
+        )
     return pd.DataFrame(escalations)
 
 

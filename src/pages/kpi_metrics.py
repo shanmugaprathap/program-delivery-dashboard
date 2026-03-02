@@ -20,6 +20,10 @@ def render():
     with st.expander("Filters", expanded=False):
         selected_ids = program_filter(programs, key="kpi_prog")
 
+    if metrics.empty:
+        st.warning("No delivery metrics available. Metrics are not provided by the Asana data source.")
+        return
+
     filtered = metrics[metrics["program_id"].isin(selected_ids)]
 
     if filtered.empty:
@@ -28,6 +32,9 @@ def render():
 
     # Latest and previous week
     sorted_weeks = sorted(filtered["week_start"].unique())
+    if not sorted_weeks:
+        st.warning("No weekly data available.")
+        return
     latest_week = sorted_weeks[-1]
     prev_week = sorted_weeks[-2] if len(sorted_weeks) >= 2 else None
 
